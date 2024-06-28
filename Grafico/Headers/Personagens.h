@@ -6,6 +6,9 @@
 #define ENEMY_SYMBOL 'E'
 #define CHAR_SYMBOL 'P'
 #define BOMB_SYMBOL 'O'
+#define NUM_ENEMIES 5
+#define BOMB_RANGE 2
+#define INITIAL_LIVES 3
 
 struct Character {
     int x;
