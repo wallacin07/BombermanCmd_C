@@ -2,13 +2,16 @@
 #include <stdlib.h>
 #include "Personagens.h"
 
+
 #ifndef DISPLAY_H
 #define DISPLAY_H
-
 
 void clearConsole() {
     system("cls");
 }
+
+
+
 
 void displayMatriz(char **fixedCharMatriz, int **matriz, Character character) {
     clearConsole();

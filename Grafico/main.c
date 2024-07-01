@@ -27,6 +27,12 @@ struct Enemy {
     int alive;
 };
 
+struct Player {
+    char nickName[15];
+    int pontuation;
+};
+
+
 // Variáveis globais para controle do jogo
 int matriz[L][C] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -54,8 +60,9 @@ char fixedCharMatriz[L][C] = {
 
 struct Character character;
 struct Enemy enemies[NUM_ENEMIES];
-
+int pontuation = 0;
 HANDLE hMutex;
+char nickName[20];
 
 // Função para limpar a console
 void clearConsole() {
@@ -148,6 +155,52 @@ void explodeBomb(int bombX, int bombY) {
     }
 
     ReleaseMutex(hMutex);
+}
+
+
+
+void displayScores() {
+    FILE *file = fopen("dados.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    struct Player *players = NULL;
+    int count = 0;
+    while (!feof(file)) {
+        players = realloc(players, sizeof(struct Player) * (count + 1));
+        if (fscanf(file, "%s %d", players[count].nickName, &players[count].pontuation) == 2) {
+            count++;
+        }
+    }
+    fclose(file);
+
+    printf("\nRANKING:\n");
+    for (int i = 0; i < count; i++) {
+        printf("%s: %d\n", players[i].nickName, players[i].pontuation);
+    }
+
+    free(players);
+}
+
+
+void saveScore(char* result, char *nickName[20]) {
+    // char nickName[15];
+    // printf("\n\nEnter your nickname: ");
+    // scanf("%s", nickName);
+
+    FILE *file = fopen("dados.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    fprintf(file, "%s %d\n", nickName, pontuation);
+    fclose(file);
+
+    printf("%s\n", result);
+    displayScores();
 }
 
 
@@ -339,8 +392,12 @@ DWORD WINAPI checkBombs(LPVOID lpParam) {
 }
 
 int main() {
-    srand(time(NULL));
 
+    printf("\n\nENTER YOUR NICK NAME: ");
+    scanf("%s", nickName);
+    srand(time(NULL));
+    
+    clearConsole();
     // Inicializa o personagem
     character.x = 0;
     character.y = 0;

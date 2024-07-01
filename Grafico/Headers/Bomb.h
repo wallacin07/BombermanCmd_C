@@ -1,37 +1,44 @@
+#ifndef BOMB_H
+#define BOMB_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <conio.h>
 #include <windows.h>
 #include "Personagens.h"
 #include "FuncoesAdd.h"
-#ifndef BOMB_H
-#define BOMB_H
-#define BOMB_RANGE 2
 
+#define BOMB_RANGE 2
 
 HANDLE hMutex;
 
-int isValidBombPosition(int x, int y, int **matriz) {
+typedef struct {
+    int (*matriz)[C];
+    Character character;
+    Enemy *enemies;
+    HANDLE hMutex;
+} BombParams;
+
+int isValidBombPosition(int x, int y, int matriz[L][C]) {
     if (x < 0 || x >= L || y < 0 || y >= C) {
         return 0;
     }
     return (matriz[x][y] == 0);
 }
 
-void placeBomb(Character character, int **matriz) {
-    if (isValidBombPosition(character.x, character.y + 1,matriz)) {
+void placeBomb(Character character, int matriz[L][C]) {
+    if (isValidBombPosition(character.x, character.y + 1, matriz)) {
         matriz[character.x][character.y + 1] = BOMB_SYMBOL;
-    } else if (isValidBombPosition(character.x, character.y - 1,matriz)) {
+    } else if (isValidBombPosition(character.x, character.y - 1, matriz)) {
         matriz[character.x][character.y - 1] = BOMB_SYMBOL;
-    } else if (isValidBombPosition(character.x + 1, character.y,matriz)) {
+    } else if (isValidBombPosition(character.x + 1, character.y, matriz)) {
         matriz[character.x + 1][character.y] = BOMB_SYMBOL;
-    } else if (isValidBombPosition(character.x - 1, character.y,matriz)) {
+    } else if (isValidBombPosition(character.x - 1, character.y, matriz)) {
         matriz[character.x - 1][character.y] = BOMB_SYMBOL;
     }
 }
 
-void explodeBomb(int bombX, int bombY, Character character, int **matriz, Enemy *enemies) {
+void explodeBomb(int bombX, int bombY, Character *character, int matriz[L][C], Enemy *enemies, HANDLE hMutex) {
     WaitForSingleObject(hMutex, INFINITE);
 
     matriz[bombX][bombY] = 0;
@@ -58,18 +65,18 @@ void explodeBomb(int bombX, int bombY, Character character, int **matriz, Enemy 
                     }
                 } else if (matriz[x][y] == CHAR_SYMBOL) {
                     // Diminui a vida do personagem
-                    character.lives--;
-                    if (character.lives == 0) {
+                    character->lives--;
+                    if (character->lives == 0) {
                         printf("Game Over\n");
                         exit(0);
                     }
 
                     // Move o personagem para a posição inicial
-                    matriz[character.x][character.y] = 0;
-                    character.x = 0;
-                    character.y = 0;
-                    matriz[character.x][character.y] = CHAR_SYMBOL;
-                } 
+                    matriz[character->x][character->y] = 0;
+                    character->x = 0;
+                    character->y = 0;
+                    matriz[character->x][character->y] = CHAR_SYMBOL;
+                }
             }
         }
     }
@@ -77,19 +84,25 @@ void explodeBomb(int bombX, int bombY, Character character, int **matriz, Enemy 
     ReleaseMutex(hMutex);
 }
 
-DWORD WINAPI checkBombs(LPVOID lpParam, int **matriz, Character character, Enemy *enemies) {
+DWORD WINAPI checkBombs(LPVOID lpParam) {
+    BombParams *params = (BombParams *)lpParam;
+    int (*matriz)[C] = params->matriz;
+    Character *character = &(params->character);
+    Enemy *enemies = params->enemies;
+    HANDLE hMutex = params->hMutex;
+
     while (1) {
         for (int i = 0; i < L; i++) {
             for (int j = 0; j < C; j++) {
                 if (matriz[i][j] == BOMB_SYMBOL) {
                     Sleep(2000); // Tempo para explosão da bomba
-                    explodeBomb(i, j, character,matriz,enemies);
+                    explodeBomb(i, j, character, matriz, enemies, hMutex);
                 }
             }
         }
-        Sleep(100); 
+        Sleep(100);
     }
     return 0;
 }
 
-#endif // !Inicio
+#endif // BOMB_H

@@ -19,15 +19,24 @@
 #define INITIAL_LIVES 3
 #define ENEMY_SPEED 800 // Velocidade dos inimigos em milissegundos
 
-HANDLE hMutex;
+typedef struct {
+    int (*matriz)[C];
+    Character character;
+    HANDLE hMutex;
+} CharacterParams;
 
 // Função para mover o personagem
-DWORD WINAPI moveCharacter(LPVOID lpParam, Character character, int **matriz) {
+DWORD WINAPI moveCharacter(LPVOID lpParam) {
+    CharacterParams *params = (CharacterParams *)lpParam;
+    int (*matriz)[C] = params->matriz;
+    Character *character = &(params->character);
+    HANDLE hMutex = params->hMutex;
+
     while (1) {
         if (_kbhit()) {
             char input = _getch();
-            int newX = character.x;
-            int newY = character.y;
+            int newX = character->x;
+            int newY = character->y;
 
             switch (input) {
                 case 'w': // Para cima
@@ -43,17 +52,17 @@ DWORD WINAPI moveCharacter(LPVOID lpParam, Character character, int **matriz) {
                     newY++;
                     break;
                 case ' ': // Colocar bomba
-                    placeBomb(character, matriz);
+                    placeBomb(*character, matriz);
                     break;
             }
 
             // Verifica se a nova posição é válida
             if (newX >= 0 && newX < L && newY >= 0 && newY < C && matriz[newX][newY] == 0) {
                 WaitForSingleObject(hMutex, INFINITE);
-                matriz[character.x][character.y] = 0; 
-                character.x = newX;
-                character.y = newY;
-                matriz[character.x][character.y] = CHAR_SYMBOL; 
+                matriz[character->x][character->y] = 0; 
+                character->x = newX;
+                character->y = newY;
+                matriz[character->x][character->y] = CHAR_SYMBOL; 
                 ReleaseMutex(hMutex); 
             }
         }
@@ -62,4 +71,4 @@ DWORD WINAPI moveCharacter(LPVOID lpParam, Character character, int **matriz) {
     return 0;
 }
 
-#endif
+#endif // MOVESCHARACTER_H

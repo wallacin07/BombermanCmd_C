@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <conio.h>
 #include <windows.h>
 #include "Personagens.h"
 #include "FuncoesAdd.h"
@@ -13,16 +12,23 @@
 #define C 15
 #define ENEMY_SYMBOL 'E'
 #define CHAR_SYMBOL 'P'
-#define BOMB_SYMBOL 'O'
 #define NUM_ENEMIES 5
-#define BOMB_RANGE 2
-#define INITIAL_LIVES 3
 #define ENEMY_SPEED 800 // Velocidade dos inimigos em milissegundos
 
-HANDLE hMutex;
+typedef struct {
+    int matriz[L][C];
+    Enemy *enemies;
+    Character character;
+    HANDLE hMutex;
+} ThreadParams;
 
-// Função para mover os inimigos
-DWORD WINAPI moveEnemies(LPVOID lpParam, int **matriz, Enemy *enemies, Character character) {
+DWORD WINAPI moveEnemies(LPVOID lpParam) {
+    ThreadParams *params = (ThreadParams *)lpParam;
+    int (*matriz)[C] = params->matriz;
+    Enemy *enemies = params->enemies;
+    Character character = params->character;
+    HANDLE hMutex = params->hMutex;
+
     while (1) {
         for (int i = 0; i < NUM_ENEMIES; i++) {
             if (!enemies[i].alive) continue;
@@ -40,8 +46,8 @@ DWORD WINAPI moveEnemies(LPVOID lpParam, int **matriz, Enemy *enemies, Character
 
             // Verifica se o inimigo está na mesma linha ou coluna
             // e a uma distância máxima de 2 casas vazias
-            if ((dx == 0 && abs(dy) <= 3 && !temParedeEntre(x, y, character.x, character.y, matriz)) ||
-                (dy == 0 && abs(dx) <= 3 && !temParedeEntre(x, y, character.x, character.y, matriz))) {
+            if ((dx == 0 && abs(dy) <= 3 && !temParedeEntre(x, y, character.x, character.y, &matriz)) ||
+                (dy == 0 && abs(dx) <= 3 && !temParedeEntre(x, y, character.x, character.y, &matriz))) {
                 // Move o inimigo em direção ao jogador
                 if (dx > 0) newX++;
                 if (dx < 0) newX--;
