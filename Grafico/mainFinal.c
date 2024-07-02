@@ -10,14 +10,14 @@
 #define ENEMY_SYMBOL 'E'
 #define CHAR_SYMBOL 'P'
 #define BOMB_SYMBOL 'O'
-#define NUM_ENEMIES 5
+#define NUM_ENEMIES 3
 #define BOMB_RANGE 2
 #define INITIAL_LIVES 3
 #define ENEMY_SPEED 800 // Velocidade dos inimigos em milissegundos
 #define BOMB_DURATION 2000 // Duração da bomba em milissegundos
 
 int pontuation = 0;
-int numEnemies = 5;
+int numEnemies = NUM_ENEMIES;
 char nickName[20];
 
 //limpa a tela
@@ -113,6 +113,21 @@ void displayMatriz() {
     printf("Lives: %d\n", character.lives);
 }
 
+void saveScore(char* result, char *nickName[20]) {
+    // char nickName[15];
+    // printf("\n\nEnter your nickname: ");
+    // scanf("%s", nickName);
+
+    FILE *file = fopen("dados.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    fprintf(file, "%s %d\n", nickName, pontuation);
+    fclose(file);
+    displayScores();
+}
 // Função para verificar se uma posição é válida para colocar a bomba
 int isValidBombPosition(int x, int y) {
     if (x < 0 || x >= L || y < 0 || y >= C) {
@@ -256,12 +271,15 @@ DWORD WINAPI moveEnemies() {
                 int newX = enemies[i].xEnemy;
                 int newY = enemies[i].yEnemy;
 
-                // Direção do movimento
-                switch (enemies[i].direction) {
-                    case 0: newX++; break; // Baixo
-                    case 1: newX--; break; // Cima
-                    case 2: newY++; break; // Direita
-                    case 3: newY--; break; // Esquerda
+                // Direção para seguir o personagem principal
+                if (newX < character.x) {
+                    newX++; // Mover para baixo
+                } else if (newX > character.x) {
+                    newX--; // Mover para cima
+                } else if (newY < character.y) {
+                    newY++; // Mover para a direita
+                } else if (newY > character.y) {
+                    newY--; // Mover para a esquerda
                 }
 
                 // Verifica se a nova posição é válida
@@ -271,11 +289,13 @@ DWORD WINAPI moveEnemies() {
                     enemies[i].yEnemy = newY;
                     matriz[newX][newY] = ENEMY_SYMBOL; // Atualiza para a nova posição
                 } else {
-                    // Muda a direção do inimigo se houver obstáculo
+                    // Caso contrário, muda aleatoriamente a direção do inimigo
                     enemies[i].direction = rand() % 4;
                 }
             }
-            if (enemies[i].xEnemy == character.x && enemies[i].yEnemy == character.y) {
+
+            // Verifica se o inimigo alcançou o personagem principal
+            if ((enemies[i].xEnemy - 1 == character.x && enemies[i].yEnemy - 1 == character.y)||(enemies[i].xEnemy +1 == character.x && enemies[i].yEnemy + 1 == character.y)||(enemies[i].xEnemy - 1 == character.x && enemies[i].yEnemy == character.y)||(enemies[i].xEnemy == character.x && enemies[i].yEnemy - 1 == character.y)||(enemies[i].xEnemy + 1 == character.x && enemies[i].yEnemy == character.y)||(enemies[i].xEnemy == character.x && enemies[i].yEnemy +1 == character.y)) {
                 character.lives--;
                 if (character.lives == 0) {
                     printf("Game Over\n");
@@ -288,8 +308,9 @@ DWORD WINAPI moveEnemies() {
                     matriz[character.x][character.y] = CHAR_SYMBOL;
                 }
             }
-            ReleaseMutex(hMutex);
-        }     
+        }
+
+        ReleaseMutex(hMutex);
     }
     return 0;
 }
@@ -319,29 +340,26 @@ void displayScores() {
     free(players);
 }
 
-void saveScore(char* result, char *nickName[20]) {
-    // char nickName[15];
-    // printf("\n\nEnter your nickname: ");
-    // scanf("%s", nickName);
-
-    FILE *file = fopen("dados.txt", "a");
-    if (file == NULL) {
-        printf("Error opening file!\n");
-        return;
-    }
-
-    fprintf(file, "%s %d\n", nickName, pontuation);
-    fclose(file);
-
-    printf("%s\n", result);
-    displayScores();
-}
 
 // Função principal
 int main() {
 
+    clearWin();
+
+    printf("\n\n+====== WELCOME ======+ ");
+    Sleep(1300);
+    printf("\n\n+====== RULES ========+ ");
+    Sleep(1300);
+    printf("\n\n1 - ESCAPE OR ELIMINATE ENEMIES");
+    Sleep(1300);
+    printf("\n\n2 - PRESS SPACE TO PLACE A BOMB IN THE ENEMIES PATH");
+    Sleep(1300);
+    printf("\n\n3 - IF ENEMIES ARE ONE BLOCK AWAY THEY WILL FOLLOW YOU AND DO DAMAGE");
+    Sleep(1300);
     printf("\n\nENTER YOUR NICK NAME: ");
     scanf("%s", nickName);
+    printf("\n\nGOOD GAME %s!", nickName);
+    Sleep(1600);
 
     clearWin();
 
