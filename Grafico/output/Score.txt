@@ -1,0 +1,6 @@
+wallace : 0
+ola : 3
+adrian : 4
+walla : 0
+ola : 0
+olaaa : 0

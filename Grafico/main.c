@@ -13,6 +13,8 @@
 #define BOMB_RANGE 2
 #define INITIAL_LIVES 3
 #define ENEMY_SPEED 800 // Velocidade dos inimigos em milissegundos
+#define MAX_LENGTH 256
+
 
 struct Character {
     int x;
@@ -63,7 +65,7 @@ struct Enemy enemies[NUM_ENEMIES];
 int pontuation = 0;
 HANDLE hMutex;
 char nickName[20];
-
+int eny = 5;
 // Função para limpar a console
 void clearConsole() {
     system("cls");
@@ -89,6 +91,45 @@ void displayMatriz() {
     printf("Lives: %d\n", character.lives);
 }
 
+void savescore()
+{
+    char nickName[20];
+    printf("\n\nENTER YOUR NICK NAME: ");
+    scanf("%s", nickName);
+    FILE *f;
+    char url[] = "Score.txt";
+    f = fopen(url, "a");
+    fprintf(f,"\n%s : %i", nickName, pontuation);
+    fclose(f);
+}
+
+
+void ver_score()
+{
+    
+    FILE *f;
+    char url[] = "Score.txt";
+    f = fopen(url, "r");
+    char buffer[MAX_LENGTH];
+
+    while (fgets(buffer, MAX_LENGTH, f))
+        printf("%s", buffer);
+
+    fclose(f);
+}
+
+
+int checkVictory() {
+    for (int i = 0; i < NUM_ENEMIES; i++) {
+        if (enemies[i].alive) {
+            return 0; // Ainda há inimigos vivos
+        }
+    }
+    eny = 0;
+    savescore();
+    ver_score();
+    return 1; // Todos os inimigos foram derrotados
+}
 // Função para verificar se uma posição é válida para colocar a bomba
 int isValidBombPosition(int x, int y) {
     if (x < 0 || x >= L || y < 0 || y >= C) {
@@ -108,6 +149,22 @@ void placeBomb() {
     } else if (isValidBombPosition(character.x - 1, character.y)) {
         matriz[character.x - 1][character.y] = BOMB_SYMBOL;
     }
+}
+int temParedeEntre(int x1, int y1, int x2, int y2) {
+    if (x1 == x2) { // Movimento horizontal
+        for (int j = (y1 < y2 ? y1 + 1 : y2 + 1); j < (y1 > y2 ? y1 : y2); j++) {
+            if (matriz[x1][j] == 1) {
+                return 1; // Há parede no caminho
+            }
+        }
+    } else if (y1 == y2) { // Movimento vertical
+        for (int i = (x1 < x2 ? x1 + 1 : x2 + 1); i < (x1 > x2 ? x1 : x2); i++) {
+            if (matriz[i][y1] == 1) {
+                return 1; // Há parede no caminho
+            }
+        }
+    }
+    return 0; // Não há parede no caminho
 }
 
 // Função para explodir a bomba, corrigida para verificar paredes
@@ -132,6 +189,7 @@ void explodeBomb(int bombX, int bombY) {
                     for (int k = 0; k < NUM_ENEMIES; k++) {
                         if (enemies[k].xEnemy == x && enemies[k].yEnemy == y && enemies[k].alive) {
                             enemies[k].alive = 0;
+                            pontuation++;
                             matriz[x][y] = 0; // Limpa a posição do inimigo morto
                             break; // Sai do loop após matar o inimigo
                         }
@@ -140,7 +198,10 @@ void explodeBomb(int bombX, int bombY) {
                     // Diminui a vida do personagem
                     character.lives--;
                     if (character.lives == 0) {
+                        
                         printf("Game Over\n");
+                        savescore();
+                        ver_score();
                         exit(0);
                     }
 
@@ -159,78 +220,11 @@ void explodeBomb(int bombX, int bombY) {
 
 
 
-void displayScores() {
-    FILE *file = fopen("dados.txt", "r");
-    if (file == NULL) {
-        printf("Error opening file!\n");
-        return;
-    }
-
-    struct Player *players = NULL;
-    int count = 0;
-    while (!feof(file)) {
-        players = realloc(players, sizeof(struct Player) * (count + 1));
-        if (fscanf(file, "%s %d", players[count].nickName, &players[count].pontuation) == 2) {
-            count++;
-        }
-    }
-    fclose(file);
-
-    printf("\nRANKING:\n");
-    for (int i = 0; i < count; i++) {
-        printf("%s: %d\n", players[i].nickName, players[i].pontuation);
-    }
-
-    free(players);
-}
-
-
-void saveScore(char* result, char *nickName[20]) {
-    // char nickName[15];
-    // printf("\n\nEnter your nickname: ");
-    // scanf("%s", nickName);
-
-    FILE *file = fopen("dados.txt", "a");
-    if (file == NULL) {
-        printf("Error opening file!\n");
-        return;
-    }
-
-    fprintf(file, "%s %d\n", nickName, pontuation);
-    fclose(file);
-
-    printf("%s\n", result);
-    displayScores();
-}
 
 
 // Função para verificar se há uma parede entre dois pontos
-int temParedeEntre(int x1, int y1, int x2, int y2) {
-    if (x1 == x2) { // Movimento horizontal
-        for (int j = (y1 < y2 ? y1 + 1 : y2 + 1); j < (y1 > y2 ? y1 : y2); j++) {
-            if (matriz[x1][j] == 1) {
-                return 1; // Há parede no caminho
-            }
-        }
-    } else if (y1 == y2) { // Movimento vertical
-        for (int i = (x1 < x2 ? x1 + 1 : x2 + 1); i < (x1 > x2 ? x1 : x2); i++) {
-            if (matriz[i][y1] == 1) {
-                return 1; // Há parede no caminho
-            }
-        }
-    }
-    return 0; // Não há parede no caminho
-}
 
 // Função para verificar vitória
-int checkVictory() {
-    for (int i = 0; i < NUM_ENEMIES; i++) {
-        if (enemies[i].alive) {
-            return 0; // Ainda há inimigos vivos
-        }
-    }
-    return 1; // Todos os inimigos foram derrotados
-}
 
 // Função para mover os inimigos
 DWORD WINAPI moveEnemies(LPVOID lpParam) {
@@ -309,6 +303,8 @@ DWORD WINAPI moveEnemies(LPVOID lpParam) {
                 character.lives--;
                 if (character.lives == 0) {
                     printf("Game Over\n");
+                    savescore();
+                    ver_score();
                     exit(0);
                 } else {
                     // Reinicia o personagem na posição inicial
@@ -393,8 +389,6 @@ DWORD WINAPI checkBombs(LPVOID lpParam) {
 
 int main() {
 
-    printf("\n\nENTER YOUR NICK NAME: ");
-    scanf("%s", nickName);
     srand(time(NULL));
     
     clearConsole();
@@ -423,7 +417,7 @@ int main() {
     HANDLE hThreadBombs = CreateThread(NULL, 0, checkBombs, NULL, 0, NULL);
 
     // Loop principal do jogo para exibir a matriz
-    while (1) {
+    while (character.lives > 0 || eny == 0) {
         displayMatriz();
         Sleep(100);
     }
