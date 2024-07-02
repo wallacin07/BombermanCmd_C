@@ -10,7 +10,7 @@
 #define ENEMY_SYMBOL 'E'
 #define CHAR_SYMBOL 'P'
 #define BOMB_SYMBOL 'O'
-#define NUM_ENEMIES 5
+#define NUM_ENEMIES 3
 #define BOMB_RANGE 2
 #define INITIAL_LIVES 3
 #define ENEMY_SPEED 800 // Velocidade dos inimigos em milissegundos
@@ -19,8 +19,13 @@
 
 
 int pontuation = 0;
+<<<<<<< HEAD
 int numEnemies = 5;
 char nome[20];
+=======
+int numEnemies = NUM_ENEMIES;
+char nickName[20];
+>>>>>>> 2ebd7cd0ae22d076e89d54537442a62533a0785a
 
 //limpa a tela
 void clearWin() {
@@ -92,6 +97,25 @@ void displayMatriz() {
     }
     printf("Lives: %d\n", character.lives);
 }
+<<<<<<< HEAD
+=======
+
+void saveScore(char* result, char *nickName[20]) {
+    // char nickName[15];
+    // printf("\n\nEnter your nickname: ");
+    // scanf("%s", nickName);
+
+    FILE *file = fopen("dados.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    fprintf(file, "%s %d\n", nickName, pontuation);
+    fclose(file);
+    displayScores();
+}
+>>>>>>> 2ebd7cd0ae22d076e89d54537442a62533a0785a
 // Função para verificar se uma posição é válida para colocar a bomba
 int isValidBombPosition(int x, int y) {
     if (x < 0 || x >= L || y < 0 || y >= C) {
@@ -269,6 +293,7 @@ DWORD WINAPI moveEnemies(LPVOID lpParam) {
                 matriz[x][y] = 0; // Limpa a posição atual do inimigo
                 enemies[i].direction = rand() % 4;
 
+<<<<<<< HEAD
                 switch (enemies[i].direction) {
                     case 0: // Movimento para cima
                         if (x > 0 && matriz[x - 1][y] == 0) {
@@ -312,6 +337,33 @@ DWORD WINAPI moveEnemies(LPVOID lpParam) {
 
             // Verifica se o inimigo encontrou o personagem
             if (enemies[i].xEnemy == character.x && enemies[i].yEnemy == character.y) {
+=======
+                // Direção para seguir o personagem principal
+                if (newX < character.x) {
+                    newX++; // Mover para baixo
+                } else if (newX > character.x) {
+                    newX--; // Mover para cima
+                } else if (newY < character.y) {
+                    newY++; // Mover para a direita
+                } else if (newY > character.y) {
+                    newY--; // Mover para a esquerda
+                }
+
+                // Verifica se a nova posição é válida
+                if (newX >= 0 && newX < L && newY >= 0 && newY < C && matriz[newX][newY] == 0) {
+                    matriz[enemies[i].xEnemy][enemies[i].yEnemy] = 0; // Limpa a posição atual
+                    enemies[i].xEnemy = newX;
+                    enemies[i].yEnemy = newY;
+                    matriz[newX][newY] = ENEMY_SYMBOL; // Atualiza para a nova posição
+                } else {
+                    // Caso contrário, muda aleatoriamente a direção do inimigo
+                    enemies[i].direction = rand() % 4;
+                }
+            }
+
+            // Verifica se o inimigo alcançou o personagem principal
+            if ((enemies[i].xEnemy - 1 == character.x && enemies[i].yEnemy - 1 == character.y)||(enemies[i].xEnemy +1 == character.x && enemies[i].yEnemy + 1 == character.y)||(enemies[i].xEnemy - 1 == character.x && enemies[i].yEnemy == character.y)||(enemies[i].xEnemy == character.x && enemies[i].yEnemy - 1 == character.y)||(enemies[i].xEnemy + 1 == character.x && enemies[i].yEnemy == character.y)||(enemies[i].xEnemy == character.x && enemies[i].yEnemy +1 == character.y)) {
+>>>>>>> 2ebd7cd0ae22d076e89d54537442a62533a0785a
                 character.lives--;
                 if (character.lives == 0) {
                     printf("Game Over\n");
@@ -324,6 +376,7 @@ DWORD WINAPI moveEnemies(LPVOID lpParam) {
                     matriz[character.x][character.y] = CHAR_SYMBOL;
                 }
             }
+<<<<<<< HEAD
 
             ReleaseMutex(hMutex);
         }
@@ -335,6 +388,11 @@ DWORD WINAPI moveEnemies(LPVOID lpParam) {
         //     Sleep(2000);
         //     exit(0);
         // }
+=======
+        }
+
+        ReleaseMutex(hMutex);
+>>>>>>> 2ebd7cd0ae22d076e89d54537442a62533a0785a
     }
     return 0;
 }
@@ -360,8 +418,26 @@ DWORD WINAPI checkBombs(LPVOID lpParam) {
 // Função principal
 int main() {
 
+    clearWin();
+
+    printf("\n\n+====== WELCOME ======+ ");
+    Sleep(1300);
+    printf("\n\n+====== RULES ========+ ");
+    Sleep(1300);
+    printf("\n\n1 - ESCAPE OR ELIMINATE ENEMIES");
+    Sleep(1300);
+    printf("\n\n2 - PRESS SPACE TO PLACE A BOMB IN THE ENEMIES PATH");
+    Sleep(1300);
+    printf("\n\n3 - IF ENEMIES ARE ONE BLOCK AWAY THEY WILL FOLLOW YOU AND DO DAMAGE");
+    Sleep(1300);
     printf("\n\nENTER YOUR NICK NAME: ");
+<<<<<<< HEAD
     scanf("%s", nome);
+=======
+    scanf("%s", nickName);
+    printf("\n\nGOOD GAME %s!", nickName);
+    Sleep(1600);
+>>>>>>> 2ebd7cd0ae22d076e89d54537442a62533a0785a
 
     clearWin();
 

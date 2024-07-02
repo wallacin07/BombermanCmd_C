@@ -33,6 +33,8 @@ void Interface()
             inicio = 1;
         }
     }
+
+    system("cls");
 }
 
 #endif
