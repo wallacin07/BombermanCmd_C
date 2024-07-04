@@ -5,15 +5,43 @@
 #include <windows.h>
 #include "File.h"
 
-#define L 9
-#define C 15
+
+#define L 16
+#define C 30
 #define ENEMY_SYMBOL 'E'
 #define CHAR_SYMBOL 'P'
 #define BOMB_SYMBOL 'O'
-#define NUM_ENEMIES 5
+#define NUM_ENEMIES 2
 #define BOMB_RANGE 2
 #define INITIAL_LIVES 3
 #define ENEMY_SPEED 800 // Velocidade dos inimigos em milissegundos
+
+#define BLACK 0
+#define DARK_BLUE 1
+#define RED 4
+#define WHITE 15
+#define ORANGE  6
+#define CYAN_BLUE 3
+
+
+struct Character {
+    int x;
+    int y;
+    int lives;
+};
+
+struct Enemy {
+    int xEnemy;
+    int yEnemy;
+    int direction;
+    int alive;
+};
+
+struct Player {
+    char nickName[15];
+    int pontuation;
+};
+
 
 // Variáveis globais para controle do jogo
 int matriz[L][C] = {
@@ -54,54 +82,49 @@ char fixedCharMatriz[L][C] = {
     {' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#', ' ', '#'}
 };
 
-struct Character {
-    int x;
-    int y;
-    int lives;
-};
-
-struct Enemy {
-    int xEnemy;
-    int yEnemy;
-    int direction;
-    int alive;
-};
-
-struct Player {
-    char nickName[15];
-    int pontuation;
-};
-
+int gameOver = 1;
 struct Character character;
 struct Enemy enemies[NUM_ENEMIES];
 int pontuation = 0;
 HANDLE hMutex;
 char nickName[20];
 int eny = 5;
-int gameOver = 0; // Variável global para controlar o estado do jogo
-
 // Função para limpar a console
 void clearConsole() {
     system("cls");
 }
 
+void gotoxy(int x, int y) {
+    COORD coord;
+    coord.X = x;
+    coord.Y = y;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
+void setConsoleColor(int text, int background) {
+    int color = text + (background << 4);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+}
 // Função para exibir a matriz com caracteres
 void displayMatriz() {
-    clearConsole();
     for (int i = 0; i < L; i++) {
         for (int j = 0; j < C; j++) {
+            gotoxy(j * 2, i);
             if (matriz[i][j] == ENEMY_SYMBOL) {
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), RED);
                 printf("E ");
             } else if (matriz[i][j] == CHAR_SYMBOL) {
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), CYAN_BLUE);
                 printf("P ");
             } else if (matriz[i][j] == BOMB_SYMBOL) {
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), ORANGE);
                 printf("O ");
             } else {
+                SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), WHITE);
                 printf("%c ", fixedCharMatriz[i][j]);
             }
         }
-        printf("\n");
     }
+    gotoxy(0, L);
     printf("Lives: %d\n", character.lives);
 }
 
@@ -112,12 +135,11 @@ int checkVictory() {
         }
     }
     eny = 0;
+    gameOver = 0;
     savescore(pontuation);
     ver_score();
-    gameOver = 1; // Defina gameOver como verdadeiro
     return 1; // Todos os inimigos foram derrotados
 }
-
 // Função para verificar se uma posição é válida para colocar a bomba
 int isValidBombPosition(int x, int y) {
     if (x < 0 || x >= L || y < 0 || y >= C) {
@@ -138,7 +160,6 @@ void placeBomb() {
         matriz[character.x - 1][character.y] = BOMB_SYMBOL;
     }
 }
-
 int temParedeEntre(int x1, int y1, int x2, int y2) {
     if (x1 == x2) { // Movimento horizontal
         for (int j = (y1 < y2 ? y1 + 1 : y2 + 1); j < (y1 > y2 ? y1 : y2); j++) {
@@ -170,162 +191,265 @@ void explodeBomb(int bombX, int bombY) {
             if (x >= 0 && x < L && y >= 0 && y < C) {
                 // Verifica se há uma parede entre a bomba e o alvo
                 if (abs(i) + abs(j) > BOMB_RANGE || temParedeEntre(bombX, bombY, x, y)) {
-                    continue;
+                    continue; // Pula para o próximo alvo se houver parede
                 }
 
                 if (matriz[x][y] == ENEMY_SYMBOL) {
-                    matriz[x][y] = 0;
+                    // Mata o inimigo
                     for (int k = 0; k < NUM_ENEMIES; k++) {
-                        if (enemies[k].xEnemy == x && enemies[k].yEnemy == y) {
+                        if (enemies[k].xEnemy == x && enemies[k].yEnemy == y && enemies[k].alive) {
                             enemies[k].alive = 0;
-                            pontuation += 100;
-                            checkVictory();
-                            break;
+                            pontuation++;
+                            matriz[x][y] = 0; // Limpa a posição do inimigo morto
+                            break; // Sai do loop após matar o inimigo
                         }
                     }
                 } else if (matriz[x][y] == CHAR_SYMBOL) {
+                    // Diminui a vida do personagem
                     character.lives--;
-                    if (character.lives <= 0) {
-                        gameOver = 1; // Defina gameOver como verdadeiro
+                    if (character.lives == 0) {
+                        gameOver = 0;
+                        savescore(pontuation);
+                        ver_score();
+                        exit(0);
                     }
+
+                    // Move o personagem para a posição inicial
+                    matriz[character.x][character.y] = 0;
+                    character.x = 0;
+                    character.y = 0;
+                    matriz[character.x][character.y] = CHAR_SYMBOL;
+                } 
+            }
+        }
+    }
+
+    ReleaseMutex(hMutex);
+}
+
+
+
+
+
+// Função para verificar se há uma parede entre dois pontos
+
+// Função para verificar vitória
+
+// Função para mover os inimigos
+DWORD WINAPI moveEnemies(LPVOID lpParam) {
+    while (1) {
+        for (int i = 0; i < NUM_ENEMIES; i++) {
+            if (!enemies[i].alive) continue;
+
+            int x = enemies[i].xEnemy;
+            int y = enemies[i].yEnemy;
+            int newX = x;
+            int newY = y;
+
+            WaitForSingleObject(hMutex, INFINITE);
+
+            // Código para perseguir o personagem
+            int dx = character.x - x;
+            int dy = character.y - y;
+
+            // Verifica se o inimigo está na mesma linha ou coluna
+            // e a uma distância máxima de 2 casas vazias
+            if ((dx == 0 && abs(dy) <= 3 && !temParedeEntre(x, y, character.x, character.y)) ||
+                (dy == 0 && abs(dx) <= 3 && !temParedeEntre(x, y, character.x, character.y))) {
+                // Move o inimigo em direção ao jogador
+                if (dx > 0) newX++;
+                if (dx < 0) newX--;
+                if (dy > 0) newY++;
+                if (dy < 0) newY--;
+            } else {
+                // Movimento aleatório caso não esteja perto do personagem
+                matriz[x][y] = 0; // Limpa a posição atual do inimigo
+                enemies[i].direction = rand() % 4;
+
+                switch (enemies[i].direction) {
+                    case 0: // Movimento para cima
+                        if (x > 0 && matriz[x - 1][y] == 0) {
+                            newX--;
+                        }
+                        break;
+                    case 1: // Movimento para baixo
+                        if (x < L - 1 && matriz[x + 1][y] == 0) {
+                            newX++;
+                        }
+                        break;
+                    case 2: // Movimento para a esquerda
+                        if (y > 0 && matriz[x][y - 1] == 0) {
+                            newY--;
+                        }
+                        break;
+                    case 3: // Movimento para a direita
+                        if (y < C - 1 && matriz[x][y + 1] == 0) {
+                            newY++;
+                        }
+                        break;
+                }
+            }
+
+            // Verifica se a nova posição já está ocupada por outro inimigo
+            int posicaoLivre = 1;
+            for (int j = 0; j < NUM_ENEMIES; j++) {
+                if (j != i && enemies[j].xEnemy == newX && enemies[j].yEnemy == newY && enemies[j].alive) {
+                    posicaoLivre = 0;
+                    break;
+                }
+            }
+
+            // Move o inimigo se a nova posição estiver livre
+            if (posicaoLivre) {
+                matriz[x][y] = 0;
+                enemies[i].xEnemy = newX;
+                enemies[i].yEnemy = newY;
+                matriz[newX][newY] = ENEMY_SYMBOL;
+            }
+
+            // Verifica se o inimigo encontrou o personagem
+            if (enemies[i].xEnemy == character.x && enemies[i].yEnemy == character.y) {
+                character.lives--;
+                if (character.lives == 0) {
+                    gameOver = 0;
+                    printf("\nGame Over");
+                    savescore(pontuation);
+                    ver_score();
+                    exit(0);
+                } else {
+                    // Reinicia o personagem na posição inicial
+                    matriz[character.x][character.y] = 0;
+                    character.x = 0;
+                    character.y = 0;
+                    matriz[character.x][character.y] = CHAR_SYMBOL;
+                }
+            }
+
+            ReleaseMutex(hMutex);
+        }
+
+        Sleep(ENEMY_SPEED);
+
+        if (checkVictory()) {
+            printf("You Win!\n");
+            Sleep(2000);
+            exit(0);
+        }
+    }
+    return 0;
+}
+// ... (resto do código - funções moveCharacter, checkBombs, main) 
+
+// Função para mover o personagem
+
+DWORD WINAPI moveCharacter(LPVOID lpParam) {
+    while (1) {
+        if (_kbhit()) {
+            char input = _getch();
+            int newX = character.x;
+            int newY = character.y;
+
+            switch (input) {
+                case 'w': // Para cima
+                    newX--;
+                    break;
+                case 's': // Para baixo
+                    newX++;
+                    break;
+                case 'a': // Para a esquerda
+                    newY--;
+                    break;
+                case 'd': // Para a direita
+                    newY++;
+                    break;
+                case ' ': // Colocar bomba
+                    placeBomb();
+                    break;
+            }
+
+            // Verifica se a nova posição é válida
+            if (newX >= 0 && newX < L && newY >= 0 && newY < C && matriz[newX][newY] == 0) {
+                WaitForSingleObject(hMutex, INFINITE);
+                matriz[character.x][character.y] = 0; // Limpa a posição anterior do personagem
+                character.x = newX;
+                character.y = newY;
+                matriz[character.x][character.y] = CHAR_SYMBOL; // Define a nova posição do personagem
+                ReleaseMutex(hMutex);
+            }
+        }
+        Sleep(100); // Adiciona um pequeno delay para controlar a velocidade de movimento
+    }
+    return 0;
+}
+
+
+
+
+
+// Função para verificar e explodir bombas no mapa
+DWORD WINAPI checkBombs(LPVOID lpParam) {
+    while (1) {
+        for (int i = 0; i < L; i++) {
+            for (int j = 0; j < C; j++) {
+                if (matriz[i][j] == BOMB_SYMBOL) {
+                    Sleep(2000); // Tempo para explosão da bomba
+                    explodeBomb(i, j);
                 }
             }
         }
+        Sleep(100); 
     }
-    ReleaseMutex(hMutex);
+    return 0;
 }
 
-// Função para verificar e explodir bombas
-void checkBombs() {
-    if (gameOver) return; // Saia da função se o jogo acabou
-
-    for (int i = 0; i < L; i++) {
-        for (int j = 0; j < C; j++) {
-            if (matriz[i][j] == BOMB_SYMBOL) {
-                explodeBomb(i, j);
-            }
-        }
-    }
-}
-
-// Função para mover o personagem
-void moveCharacter(char direction) {
-    if (gameOver) return; // Saia da função se o jogo acabou
-
-    int newX = character.x;
-    int newY = character.y;
-
-    switch (direction) {
-        case 'w':
-            newX--;
-            break;
-        case 's':
-            newX++;
-            break;
-        case 'a':
-            newY--;
-            break;
-        case 'd':
-            newY++;
-            break;
-        case 'b':
-            placeBomb();
-            return; // Não mover o personagem ao colocar a bomba
-        default:
-            return; // Tecla inválida
-    }
-
-    if (newX >= 0 && newX < L && newY >= 0 && newY < C && matriz[newX][newY] == 0) {
-        matriz[character.x][character.y] = 0;
-        character.x = newX;
-        character.y = newY;
-        matriz[character.x][character.y] = CHAR_SYMBOL;
-    }
-}
-
-// Função para mover os inimigos
-void moveEnemies() {
-    if (gameOver) return; // Saia da função se o jogo acabou
-
-    WaitForSingleObject(hMutex, INFINITE);
-    for (int i = 0; i < NUM_ENEMIES; i++) {
-        if (enemies[i].alive) {
-            matriz[enemies[i].xEnemy][enemies[i].yEnemy] = 0;
-            switch (enemies[i].direction) {
-                case 0:
-                    if (enemies[i].xEnemy > 0 && matriz[enemies[i].xEnemy - 1][enemies[i].yEnemy] == 0) {
-                        enemies[i].xEnemy--;
-                    } else {
-                        enemies[i].direction = 1;
-                    }
-                    break;
-                case 1:
-                    if (enemies[i].xEnemy < L - 1 && matriz[enemies[i].xEnemy + 1][enemies[i].yEnemy] == 0) {
-                        enemies[i].xEnemy++;
-                    } else {
-                        enemies[i].direction = 0;
-                    }
-                    break;
-            }
-            matriz[enemies[i].xEnemy][enemies[i].yEnemy] = ENEMY_SYMBOL;
-        }
-    }
-    ReleaseMutex(hMutex);
-}
-
-// Função do loop do jogo
-void gameLoop() {
-    char input;
-    time_t start, end;
-
-    time(&start);
-    while (!gameOver) {
-        if (_kbhit()) {
-            input = _getch();
-            moveCharacter(input);
-        }
-        checkBombs();
-        moveEnemies();
-        displayMatriz();
-        Sleep(ENEMY_SPEED);
-        time(&end);
-        if (difftime(end, start) >= 30.0) {
-            break; // Interrompa o loop após 30 segundos
-        }
-    }
-}
-
-// Função principal
 int main() {
-    hMutex = CreateMutex(NULL, FALSE, NULL);
 
-    printf("Digite o nickname do jogador: ");
-    scanf("%s", nickName);
-
+    srand(time(NULL));
+    
+    clearConsole();
     // Inicializa o personagem
     character.x = 0;
     character.y = 0;
     character.lives = INITIAL_LIVES;
     matriz[character.x][character.y] = CHAR_SYMBOL;
 
-    // Inicializa os inimigos
-    srand(time(NULL));
+    // Inicializa os inimigos em posições aleatórias
     for (int i = 0; i < NUM_ENEMIES; i++) {
-        enemies[i].xEnemy = rand() % L;
-        enemies[i].yEnemy = rand() % C;
-        enemies[i].direction = rand() % 2;
         enemies[i].alive = 1;
-        if (matriz[enemies[i].xEnemy][enemies[i].yEnemy] == 0) {
-            matriz[enemies[i].xEnemy][enemies[i].yEnemy] = ENEMY_SYMBOL;
-        } else {
-            i--;
-        }
+        do {
+            enemies[i].xEnemy = rand() % L;
+            enemies[i].yEnemy = rand() % C;
+        } while (matriz[enemies[i].xEnemy][enemies[i].yEnemy] != 0);
+        matriz[enemies[i].xEnemy][enemies[i].yEnemy] = ENEMY_SYMBOL;
     }
 
-    displayMatriz();
-    gameLoop();
+    // Cria um mutex para sincronização
+    hMutex = CreateMutex(NULL, FALSE, NULL);
 
-    printf("Game Over\n");
+    // Cria threads para mover os inimigos, o personagem e verificar as bombas
+    HANDLE hThreadEnemies = CreateThread(NULL, 0, moveEnemies, NULL, 0, NULL);
+    HANDLE hThreadCharacter = CreateThread(NULL, 0, moveCharacter, NULL, 0, NULL);
+    HANDLE hThreadBombs = CreateThread(NULL, 0, checkBombs, NULL, 0, NULL);
+
+    // Loop principal do jogo para exibir a matriz
+    while (gameOver == 1) {
+        displayMatriz();
+        Sleep(100);
+    }
+    Sleep(250);
+ 
+    // Espera que as threads terminem antes de encerrar o programa
+    WaitForSingleObject(hThreadEnemies, INFINITE);
+    WaitForSingleObject(hThreadCharacter, INFINITE);
+    WaitForSingleObject(hThreadBombs, INFINITE);
+
+    CloseHandle(hThreadEnemies);
+    CloseHandle(hThreadCharacter);
+    CloseHandle(hThreadBombs);
     CloseHandle(hMutex);
+
+
+    Sleep(250);
+
     return 0;
-}
+} 
