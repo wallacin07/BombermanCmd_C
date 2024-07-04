@@ -85,6 +85,49 @@ struct Bomb bomb = { -1, -1, 0, 0 };
 
 HANDLE hMutex;
 
+void displayScores() {
+    FILE *file = fopen("dados.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    struct Player *players = NULL;
+    int count = 0;
+    while (!feof(file)) {
+        players = realloc(players, sizeof(struct Player) * (count + 1));
+        if (fscanf(file, "%s %d", players[count].nickName, &players[count].pontuation) == 2) {
+            count++;
+        }
+    }
+    fclose(file);
+
+    printf("\nRANKING:\n");
+    for (int i = 0; i < count; i++) {
+        printf("%s: %d\n", players[i].nickName, players[i].pontuation);
+    }
+
+    free(players);
+}
+
+void saveScore(char* result, char *nickName[20]) {
+    // char nickName[15];
+    // printf("\n\nEnter your nickname: ");
+    // scanf("%s", nickName);
+
+    FILE *file = fopen("dados.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file!\n");
+        return;
+    }
+
+    fprintf(file, "%s %d\n", nickName, pontuation);
+    fclose(file);
+
+    printf("%s\n", result);
+    displayScores();
+}
+
 // Função para mover o cursor do console para uma posição específica
 void gotoxy(int x, int y) {
     COORD coord;
@@ -280,49 +323,6 @@ DWORD WINAPI moveEnemies() {
         ReleaseMutex(hMutex);
     }
     return 0;
-}
-
-void displayScores() {
-    FILE *file = fopen("dados.txt", "r");
-    if (file == NULL) {
-        printf("Error opening file!\n");
-        return;
-    }
-
-    struct Player *players = NULL;
-    int count = 0;
-    while (!feof(file)) {
-        players = realloc(players, sizeof(struct Player) * (count + 1));
-        if (fscanf(file, "%s %d", players[count].nickName, &players[count].pontuation) == 2) {
-            count++;
-        }
-    }
-    fclose(file);
-
-    printf("\nRANKING:\n");
-    for (int i = 0; i < count; i++) {
-        printf("%s: %d\n", players[i].nickName, players[i].pontuation);
-    }
-
-    free(players);
-}
-
-void saveScore(char* result, char *nickName[20]) {
-    // char nickName[15];
-    // printf("\n\nEnter your nickname: ");
-    // scanf("%s", nickName);
-
-    FILE *file = fopen("dados.txt", "a");
-    if (file == NULL) {
-        printf("Error opening file!\n");
-        return;
-    }
-
-    fprintf(file, "%s %d\n", nickName, pontuation);
-    fclose(file);
-
-    printf("%s\n", result);
-    displayScores();
 }
 
 // Função principal
