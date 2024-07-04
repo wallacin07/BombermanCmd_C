@@ -287,19 +287,19 @@ void moveCharacter(int dx, int dy) {
 // Função para mover os inimigos
 DWORD WINAPI moveEnemies() {
     while (1) {
-        Sleep(ENEMY_SPEED);
+        Sleep(ENEMY_SPEED); //define um tempo para que o inimigos se movam
         WaitForSingleObject(hMutex, INFINITE);
 
-        for (int i = 0; i < NUM_ENEMIES; i++) {
+        for (int i = 0; i < NUM_ENEMIES; i++) { //verifica se o inimigo está vivo
             if (enemies[i].alive) {
-                int dx = character.x - enemies[i].xEnemy;
+                int dx = character.x - enemies[i].xEnemy;  // Calcula a diferença na posição x entre o personagem e o inimigo.
                 int dy = character.y - enemies[i].yEnemy;
 
                 int newX = enemies[i].xEnemy;
                 int newY = enemies[i].yEnemy;
 
-                if (abs(dx) > abs(dy)) {
-                    if (dx > 0) {
+                if (abs(dx) > abs(dy)) { //compara y e x para ver o maior
+                    if (dx > 0) { // Se a diferença na posição x for positiva, move o inimigo para a direita.
                         newX++;
                     } else if (dx < 0) {
                         newX--;
@@ -365,8 +365,6 @@ DWORD WINAPI moveEnemies() {
     return 0;
 }
 
-
-// Função principal
 int main() {
 
     printf("\n\nENTER YOUR NICK NAME: ");
